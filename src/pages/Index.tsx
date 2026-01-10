@@ -4,6 +4,7 @@ import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import ProblemSection from "@/components/ProblemSection";
 import SolutionSection from "@/components/SolutionSection";
+import ThreatIntelligenceSection from "@/components/ThreatIntelligenceSection";
 import AudienceSection from "@/components/AudienceSection";
 import DifferentiatorSection from "@/components/DifferentiatorSection";
 import WaitlistSection from "@/components/WaitlistSection";
@@ -42,6 +43,7 @@ const Index = () => {
             <HeroSection />
             <ProblemSection />
             <SolutionSection />
+            <ThreatIntelligenceSection />
             <AudienceSection />
             <DifferentiatorSection />
             <WaitlistSection />
