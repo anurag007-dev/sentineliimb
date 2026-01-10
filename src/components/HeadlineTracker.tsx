@@ -111,9 +111,8 @@ const ENTITIES = {
 
 const HeadlineTracker = ({ latestUpdate }: HeadlineTrackerProps) => {
   const [headlines, setHeadlines] = useState<Headline[]>([]);
-  const [currentHeadline, setCurrentHeadline] = useState<Headline | null>(null);
-  const lastEntityRef = useRef<string>("");
   const usedHeadlinesRef = useRef<Set<string>>(new Set());
+  const lastUpdateRef = useRef<string>("");
 
   const getSeverityFromThreatCount = (count: number): "high" | "medium" | "low" => {
     if (count > 5) return "high";
@@ -121,26 +120,33 @@ const HeadlineTracker = ({ latestUpdate }: HeadlineTrackerProps) => {
     return "low";
   };
 
-  const generateHeadline = useCallback((entity: string, threatCount: number): Headline => {
+  const generateHeadline = useCallback((entity: string, threatCount: number): Headline | null => {
     const entityData = ENTITIES[entity as keyof typeof ENTITIES];
     const severity = getSeverityFromThreatCount(threatCount);
     const headlineOptions = entityData.headlines[severity];
     
-    // Avoid repetition
-    let selectedHeadline: string;
-    let attempts = 0;
-    do {
-      selectedHeadline = headlineOptions[Math.floor(Math.random() * headlineOptions.length)];
-      attempts++;
-    } while (usedHeadlinesRef.current.has(`${entity}-${selectedHeadline}`) && attempts < 10);
+    // Find an unused headline
+    const availableHeadlines = headlineOptions.filter(
+      h => !usedHeadlinesRef.current.has(`${entity}-${h}`)
+    );
     
-    usedHeadlinesRef.current.add(`${entity}-${selectedHeadline}`);
-    
-    // Clear old entries to prevent memory buildup
-    if (usedHeadlinesRef.current.size > 50) {
-      const entries = Array.from(usedHeadlinesRef.current);
-      entries.slice(0, 25).forEach(e => usedHeadlinesRef.current.delete(e));
+    // If all headlines used, reset for this entity
+    if (availableHeadlines.length === 0) {
+      headlineOptions.forEach(h => usedHeadlinesRef.current.delete(`${entity}-${h}`));
+      const freshHeadline = headlineOptions[Math.floor(Math.random() * headlineOptions.length)];
+      usedHeadlinesRef.current.add(`${entity}-${freshHeadline}`);
+      
+      return {
+        id: `${Date.now()}-${Math.random()}`,
+        entity,
+        text: freshHeadline,
+        severity,
+        timestamp: new Date(),
+      };
     }
+    
+    const selectedHeadline = availableHeadlines[Math.floor(Math.random() * availableHeadlines.length)];
+    usedHeadlinesRef.current.add(`${entity}-${selectedHeadline}`);
 
     return {
       id: `${Date.now()}-${Math.random()}`,
@@ -152,12 +158,16 @@ const HeadlineTracker = ({ latestUpdate }: HeadlineTrackerProps) => {
   }, []);
 
   useEffect(() => {
-    if (latestUpdate && latestUpdate.entity !== lastEntityRef.current) {
-      lastEntityRef.current = latestUpdate.entity;
-      
-      const newHeadline = generateHeadline(latestUpdate.entity, latestUpdate.threatCount);
-      setCurrentHeadline(newHeadline);
-      setHeadlines(prev => [newHeadline, ...prev].slice(0, 10));
+    if (latestUpdate) {
+      const updateKey = `${latestUpdate.entity}-${latestUpdate.threatCount}-${Date.now()}`;
+      if (updateKey !== lastUpdateRef.current) {
+        lastUpdateRef.current = updateKey;
+        
+        const newHeadline = generateHeadline(latestUpdate.entity, latestUpdate.threatCount);
+        if (newHeadline) {
+          setHeadlines(prev => [newHeadline, ...prev].slice(0, 8));
+        }
+      }
     }
   }, [latestUpdate, generateHeadline]);
 
@@ -210,85 +220,68 @@ const HeadlineTracker = ({ latestUpdate }: HeadlineTrackerProps) => {
         </div>
       </div>
 
-      {/* Current headline display */}
-      <div className="px-4 py-4 min-h-[80px] flex items-center">
-        <AnimatePresence mode="wait">
-          {currentHeadline ? (
-            <motion.div
-              key={currentHeadline.id}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
-              className="flex items-start gap-3 w-full"
-            >
-              <div className="flex-shrink-0 mt-0.5">
-                {getSeverityIcon(currentHeadline.severity)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span 
-                    className="text-xs font-semibold px-2 py-0.5 rounded"
-                    style={{
-                      background: currentHeadline.severity === "high" 
-                        ? "rgba(255, 51, 51, 0.2)" 
-                        : currentHeadline.severity === "medium"
-                        ? "rgba(255, 153, 51, 0.2)"
-                        : "rgba(255, 204, 51, 0.2)",
-                      color: currentHeadline.severity === "high" 
-                        ? "#ff5555" 
-                        : currentHeadline.severity === "medium"
-                        ? "#ffaa44"
-                        : "#ffcc44",
-                    }}
-                  >
-                    {currentHeadline.entity}
-                  </span>
-                  <span className="text-[10px] text-[#00ff41]/40 font-mono">
-                    {formatTime(currentHeadline.timestamp)}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-300 leading-relaxed">
-                  <span className="text-white font-medium">{currentHeadline.entity}</span>
-                  {" "}{currentHeadline.text}
-                </p>
-              </div>
-            </motion.div>
+      {/* Vertical headlines list */}
+      <div className="px-4 py-3 max-h-[320px] overflow-y-auto scrollbar-hide">
+        <AnimatePresence initial={false}>
+          {headlines.length > 0 ? (
+            <div className="flex flex-col gap-3">
+              {headlines.map((headline, index) => (
+                <motion.div
+                  key={headline.id}
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1 - index * 0.08, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                  className="flex items-start gap-3 pb-3"
+                  style={{
+                    borderBottom: index < headlines.length - 1 ? "1px solid rgba(0, 255, 65, 0.08)" : "none",
+                  }}
+                >
+                  <div className="flex-shrink-0 mt-0.5">
+                    {getSeverityIcon(headline.severity)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span 
+                        className="text-xs font-semibold px-2 py-0.5 rounded"
+                        style={{
+                          background: headline.severity === "high" 
+                            ? "rgba(255, 51, 51, 0.2)" 
+                            : headline.severity === "medium"
+                            ? "rgba(255, 153, 51, 0.2)"
+                            : "rgba(255, 204, 51, 0.2)",
+                          color: headline.severity === "high" 
+                            ? "#ff5555" 
+                            : headline.severity === "medium"
+                            ? "#ffaa44"
+                            : "#ffcc44",
+                        }}
+                      >
+                        {headline.entity}
+                      </span>
+                      <span className="text-[10px] text-[#00ff41]/40 font-mono">
+                        {formatTime(headline.timestamp)}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-300 leading-relaxed">
+                      <span className="text-white font-medium">{headline.entity}</span>
+                      {" "}{headline.text}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           ) : (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="text-sm text-[#00ff41]/40 italic"
+              className="text-sm text-[#00ff41]/40 italic py-4 text-center"
             >
               Initializing threat monitoring systems...
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-
-      {/* Recent headlines ticker */}
-      {headlines.length > 1 && (
-        <div 
-          className="px-4 py-2 flex items-center gap-4 overflow-x-auto scrollbar-hide"
-          style={{
-            background: "rgba(0, 0, 0, 0.3)",
-            borderTop: "1px solid rgba(0, 255, 65, 0.1)",
-          }}
-        >
-          <span className="text-[10px] text-[#00ff41]/40 uppercase tracking-wider flex-shrink-0">
-            Recent:
-          </span>
-          {headlines.slice(1, 4).map((headline, index) => (
-            <span 
-              key={headline.id}
-              className="text-[11px] text-gray-500 truncate max-w-[200px] flex-shrink-0"
-              style={{ opacity: 1 - index * 0.25 }}
-            >
-              {headline.entity}: {headline.text.slice(0, 40)}...
-            </span>
-          ))}
-        </div>
-      )}
     </div>
   );
 };
