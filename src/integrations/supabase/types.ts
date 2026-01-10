@@ -14,7 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      early_access_submissions: {
+        Row: {
+          email: string
+          full_name: string
+          id: string
+          organization_type: Database["public"]["Enums"]["organization_type"]
+          phone: string | null
+          requirement: string | null
+          submitted_at: string
+        }
+        Insert: {
+          email: string
+          full_name: string
+          id?: string
+          organization_type: Database["public"]["Enums"]["organization_type"]
+          phone?: string | null
+          requirement?: string | null
+          submitted_at?: string
+        }
+        Update: {
+          email?: string
+          full_name?: string
+          id?: string
+          organization_type?: Database["public"]["Enums"]["organization_type"]
+          phone?: string | null
+          requirement?: string | null
+          submitted_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +52,12 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      organization_type:
+        | "PR Agency / Communication"
+        | "Legal / Compliance"
+        | "Company"
+        | "Government / Public Institute"
+        | "Individual"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +184,14 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      organization_type: [
+        "PR Agency / Communication",
+        "Legal / Compliance",
+        "Company",
+        "Government / Public Institute",
+        "Individual",
+      ],
+    },
   },
 } as const

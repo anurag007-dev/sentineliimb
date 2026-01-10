@@ -1,41 +1,111 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { ShieldCheck, CheckCircle2 } from "lucide-react";
+import { ShieldCheck, CheckCircle2, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { z } from "zod";
 
-const roles = [
+const organizationTypes = [
+  "PR Agency / Communication",
   "Legal / Compliance",
-  "PR / Communications",
-  "Executive",
-  "Agency Partner",
-  "Other",
-];
+  "Company",
+  "Government / Public Institute",
+  "Individual",
+] as const;
+
+// Validation schema
+const formSchema = z.object({
+  fullName: z.string().trim().min(1, "Full name is required").max(100, "Name must be less than 100 characters"),
+  email: z.string().trim().email("Please enter a valid email address").max(255, "Email must be less than 255 characters"),
+  phone: z.string().trim().max(20, "Phone number must be less than 20 characters").optional().or(z.literal("")),
+  organizationType: z.enum(organizationTypes, { required_error: "Please select an organization type" }),
+  requirement: z.string().trim().max(1000, "Requirement must be less than 1000 characters").optional().or(z.literal("")),
+});
+
+type FormData = z.infer<typeof formSchema>;
 
 const WaitlistSection = () => {
-  const [formData, setFormData] = useState({
-    name: "",
+  const [formData, setFormData] = useState<FormData>({
+    fullName: "",
     email: "",
-    organisation: "",
-    role: "",
+    phone: "",
+    organizationType: "" as typeof organizationTypes[number],
+    requirement: "",
   });
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const validateForm = (): boolean => {
+    try {
+      formSchema.parse(formData);
+      setErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const fieldErrors: Partial<Record<keyof FormData, string>> = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            fieldErrors[err.path[0] as keyof FormData] = err.message;
+          }
+        });
+        setErrors(fieldErrors);
+      }
+      return false;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
+    
+    if (!validateForm()) {
+      return;
+    }
+
     setIsSubmitting(true);
     
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setIsSubmitting(false);
-    setIsSubmitted(true);
+    try {
+      const { error } = await supabase
+        .from("early_access_submissions")
+        .insert({
+          full_name: formData.fullName.trim(),
+          email: formData.email.trim().toLowerCase(),
+          phone: formData.phone?.trim() || null,
+          organization_type: formData.organizationType,
+          requirement: formData.requirement?.trim() || null,
+        });
+
+      if (error) {
+        console.error("Submission error:", error);
+        setSubmitError("Unable to submit your request. Please try again.");
+        return;
+      }
+
+      setIsSubmitted(true);
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      setSubmitError("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData(prev => ({
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [name]: value,
     }));
+    // Clear error for this field when user starts typing
+    if (errors[name as keyof FormData]) {
+      setErrors((prev) => ({
+        ...prev,
+        [name]: undefined,
+      }));
+    }
   };
 
   return (
@@ -88,79 +158,135 @@ const WaitlistSection = () => {
               className="sentinel-card p-8"
             >
               <div className="space-y-5">
+                {/* Full Name */}
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-foreground mb-2">
-                    Full Name
+                  <label htmlFor="fullName" className="block text-sm font-medium text-foreground mb-2">
+                    Full Name <span className="text-sentinel-threat">*</span>
                   </label>
                   <input
                     type="text"
-                    id="name"
-                    name="name"
-                    required
-                    value={formData.name}
+                    id="fullName"
+                    name="fullName"
+                    value={formData.fullName}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-md bg-input border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-sentinel-glow/30 focus:border-sentinel-glow/50 transition-all"
+                    className={`w-full px-4 py-3 rounded-md bg-input border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-sentinel-glow/30 focus:border-sentinel-glow/50 transition-all ${
+                      errors.fullName ? "border-sentinel-threat/50" : "border-border"
+                    }`}
                     placeholder="Your full name"
                   />
+                  {errors.fullName && (
+                    <p className="mt-1.5 text-xs text-sentinel-threat/80">{errors.fullName}</p>
+                  )}
                 </div>
 
+                {/* Email Address */}
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">
-                    Work Email
+                    Email Address <span className="text-sentinel-threat">*</span>
                   </label>
                   <input
                     type="email"
                     id="email"
                     name="email"
-                    required
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-md bg-input border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-sentinel-glow/30 focus:border-sentinel-glow/50 transition-all"
-                    placeholder="you@company.com"
+                    className={`w-full px-4 py-3 rounded-md bg-input border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-sentinel-glow/30 focus:border-sentinel-glow/50 transition-all ${
+                      errors.email ? "border-sentinel-threat/50" : "border-border"
+                    }`}
+                    placeholder="Your email address"
                   />
+                  {errors.email && (
+                    <p className="mt-1.5 text-xs text-sentinel-threat/80">{errors.email}</p>
+                  )}
                 </div>
 
+                {/* Phone Number */}
                 <div>
-                  <label htmlFor="organisation" className="block text-sm font-medium text-foreground mb-2">
-                    Organisation
+                  <label htmlFor="phone" className="block text-sm font-medium text-foreground mb-2">
+                    Phone Number <span className="text-muted-foreground text-xs">(optional)</span>
                   </label>
                   <input
-                    type="text"
-                    id="organisation"
-                    name="organisation"
-                    required
-                    value={formData.organisation}
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-md bg-input border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-sentinel-glow/30 focus:border-sentinel-glow/50 transition-all"
-                    placeholder="Your company or firm"
+                    className={`w-full px-4 py-3 rounded-md bg-input border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-sentinel-glow/30 focus:border-sentinel-glow/50 transition-all ${
+                      errors.phone ? "border-sentinel-threat/50" : "border-border"
+                    }`}
+                    placeholder="Your phone number"
                   />
+                  {errors.phone && (
+                    <p className="mt-1.5 text-xs text-sentinel-threat/80">{errors.phone}</p>
+                  )}
                 </div>
 
+                {/* Organization Type */}
                 <div>
-                  <label htmlFor="role" className="block text-sm font-medium text-foreground mb-2">
-                    Role
+                  <label htmlFor="organizationType" className="block text-sm font-medium text-foreground mb-2">
+                    Organization Type <span className="text-sentinel-threat">*</span>
                   </label>
                   <select
-                    id="role"
-                    name="role"
-                    required
-                    value={formData.role}
+                    id="organizationType"
+                    name="organizationType"
+                    value={formData.organizationType}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-md bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-sentinel-glow/30 focus:border-sentinel-glow/50 transition-all appearance-none cursor-pointer"
+                    className={`w-full px-4 py-3 rounded-md bg-input border text-foreground focus:outline-none focus:ring-2 focus:ring-sentinel-glow/30 focus:border-sentinel-glow/50 transition-all appearance-none cursor-pointer ${
+                      errors.organizationType ? "border-sentinel-threat/50" : "border-border"
+                    } ${!formData.organizationType ? "text-muted-foreground" : ""}`}
                   >
-                    <option value="" disabled>Select your role</option>
-                    {roles.map(role => (
-                      <option key={role} value={role}>{role}</option>
+                    <option value="" disabled>Select organization type</option>
+                    {organizationTypes.map((type) => (
+                      <option key={type} value={type}>{type}</option>
                     ))}
                   </select>
+                  {errors.organizationType && (
+                    <p className="mt-1.5 text-xs text-sentinel-threat/80">{errors.organizationType}</p>
+                  )}
                 </div>
 
+                {/* Requirement */}
+                <div>
+                  <label htmlFor="requirement" className="block text-sm font-medium text-foreground mb-2">
+                    Your Requirement <span className="text-muted-foreground text-xs">(optional)</span>
+                  </label>
+                  <textarea
+                    id="requirement"
+                    name="requirement"
+                    value={formData.requirement}
+                    onChange={handleChange}
+                    rows={3}
+                    className={`w-full px-4 py-3 rounded-md bg-input border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-sentinel-glow/30 focus:border-sentinel-glow/50 transition-all resize-none ${
+                      errors.requirement ? "border-sentinel-threat/50" : "border-border"
+                    }`}
+                    placeholder="Briefly describe your requirement"
+                  />
+                  {errors.requirement && (
+                    <p className="mt-1.5 text-xs text-sentinel-threat/80">{errors.requirement}</p>
+                  )}
+                </div>
+
+                {/* Submit Error */}
+                {submitError && (
+                  <div className="p-3 rounded-md bg-sentinel-threat/10 border border-sentinel-threat/20">
+                    <p className="text-sm text-sentinel-threat/90">{submitError}</p>
+                  </div>
+                )}
+
+                {/* Submit Button */}
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-4 mt-2 text-base font-medium bg-accent hover:bg-accent/90 text-accent-foreground rounded-md transition-all duration-200 border border-sentinel-glow/30 hover:border-sentinel-glow/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-4 mt-2 text-base font-medium bg-accent hover:bg-accent/90 text-accent-foreground rounded-md transition-all duration-200 border border-sentinel-glow/30 hover:border-sentinel-glow/50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {isSubmitting ? "Submitting..." : "Join the Sentinel Early Access List"}
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    "Join the Sentinel Early Access List"
+                  )}
                 </button>
               </div>
             </motion.form>
