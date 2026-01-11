@@ -7,7 +7,7 @@ import HeadlineTracker from "./HeadlineTracker";
 const ENTITIES = [
   { name: "Tata Steel", type: "Corporate", clockOffset: 0 },
   { name: "Indigo Airlines", type: "Aviation", clockOffset: 2.3 },
-  { name: "Kailash Vijayvargiya", type: "Political", clockOffset: 4.7 },
+  { name: "Narendra Modi", type: "Political", clockOffset: 4.7 },
   { name: "The Rebel Kid", type: "Influencer", clockOffset: 6.1 },
 ];
 
