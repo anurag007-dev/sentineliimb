@@ -42,6 +42,7 @@ const EntityRadar = ({ entityName, entityType, clockOffset, onQuarterTick }: Ent
       const newThreats: ThreatDot[] = [];
       const baseCount = 3 + Math.floor(Math.random() * 5);
       
+      // Keep some existing threats with drift
       prev.forEach(threat => {
         if (Math.random() > 0.3) {
           const drift = 2;
@@ -59,6 +60,7 @@ const EntityRadar = ({ entityName, entityType, clockOffset, onQuarterTick }: Ent
         }
       });
 
+      // Add new threats
       const toAdd = Math.max(0, baseCount - newThreats.length);
       for (let i = 0; i < toAdd; i++) {
         const severity = Math.random();
@@ -94,6 +96,7 @@ const EntityRadar = ({ entityName, entityType, clockOffset, onQuarterTick }: Ent
       if (currentQuarter !== lastQuarter) {
         setLastQuarter(currentQuarter);
         updateThreats();
+        // Slight delay for micro-latency effect
         setTimeout(() => {
           setThreats(current => {
             onQuarterTick(entityName, current.length);
@@ -102,6 +105,7 @@ const EntityRadar = ({ entityName, entityType, clockOffset, onQuarterTick }: Ent
         }, 50 + Math.random() * 100);
       }
 
+      // Interpolate threat positions
       setThreats(prev => prev.map(threat => ({
         ...threat,
         x: threat.x + (threat.targetX - threat.x) * 0.08,
@@ -117,52 +121,37 @@ const EntityRadar = ({ entityName, entityType, clockOffset, onQuarterTick }: Ent
     };
   }, [clockOffset, lastQuarter, entityName, onQuarterTick, updateThreats]);
 
-  const sanitizedName = entityName.replace(/\s/g, '');
-
   return (
     <div className="relative flex flex-col items-center">
       {/* Entity Label */}
-      <div className="mb-4 text-center">
-        <h4 className="text-sm font-semibold text-sentinel-cyan tracking-wide truncate max-w-[160px]">
+      <div className="mb-3 text-center">
+        <h4 className="text-sm font-medium text-[#00ff41] tracking-wide truncate max-w-[140px]">
           {entityName}
         </h4>
-        <span className="text-[10px] text-sentinel-ultramarine/60 uppercase tracking-[0.2em] font-medium">
+        <span className="text-[10px] text-[#00ff41]/50 uppercase tracking-widest">
           {entityType}
         </span>
       </div>
 
       {/* Radar Container */}
       <div 
-        className="relative w-full aspect-square max-w-[180px] rounded-full"
+        className="relative w-full aspect-square max-w-[180px]"
         style={{
-          background: "radial-gradient(circle, hsl(228 15% 8%) 0%, hsl(228 15% 4%) 100%)",
-          boxShadow: `
-            inset 0 0 40px hsla(195, 100%, 50%, 0.08),
-            0 0 30px hsla(210, 100%, 50%, 0.1),
-            0 0 60px hsla(195, 100%, 50%, 0.05)
-          `,
+          background: "radial-gradient(circle, #0A0F0A 0%, #050805 100%)",
+          borderRadius: "50%",
+          boxShadow: "inset 0 0 30px rgba(0, 255, 65, 0.1), 0 0 20px rgba(0, 255, 65, 0.05)",
         }}
       >
-        {/* Outer glow ring */}
-        <div 
-          className="absolute -inset-1 rounded-full pointer-events-none"
-          style={{
-            background: "conic-gradient(from 0deg, transparent, hsla(195, 100%, 50%, 0.1), transparent, hsla(210, 100%, 50%, 0.1), transparent)",
-            filter: "blur(4px)",
-            animation: "spin 12s linear infinite",
-          }}
-        />
-
         {/* Phosphor glow overlay */}
         <div 
           className="absolute inset-0 rounded-full pointer-events-none"
           style={{
-            background: "radial-gradient(circle, transparent 20%, hsla(195, 100%, 50%, 0.03) 100%)",
+            background: "radial-gradient(circle, transparent 30%, rgba(0, 255, 65, 0.02) 100%)",
           }}
         />
 
-        <svg viewBox="0 0 100 100" className="w-full h-full relative z-10">
-          {/* Grid rings with premium cyan */}
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          {/* Grid rings */}
           {[48, 36, 24, 12].map((r, i) => (
             <circle
               key={r}
@@ -170,49 +159,38 @@ const EntityRadar = ({ entityName, entityType, clockOffset, onQuarterTick }: Ent
               cy="50"
               r={r}
               fill="none"
-              stroke="hsl(195 100% 50%)"
-              strokeWidth="0.4"
-              opacity={0.2 - i * 0.03}
-              strokeDasharray={i % 2 === 0 ? "none" : "2 2"}
+              stroke="#00ff41"
+              strokeWidth="0.3"
+              opacity={0.15 - i * 0.02}
             />
           ))}
 
           {/* Cross lines */}
-          <line x1="50" y1="2" x2="50" y2="98" stroke="hsl(210 100% 50%)" strokeWidth="0.3" opacity="0.15" />
-          <line x1="2" y1="50" x2="98" y2="50" stroke="hsl(210 100% 50%)" strokeWidth="0.3" opacity="0.15" />
-          <line x1="15" y1="15" x2="85" y2="85" stroke="hsl(210 100% 50%)" strokeWidth="0.2" opacity="0.1" />
-          <line x1="85" y1="15" x2="15" y2="85" stroke="hsl(210 100% 50%)" strokeWidth="0.2" opacity="0.1" />
+          <line x1="50" y1="2" x2="50" y2="98" stroke="#00ff41" strokeWidth="0.2" opacity="0.1" />
+          <line x1="2" y1="50" x2="98" y2="50" stroke="#00ff41" strokeWidth="0.2" opacity="0.1" />
+          <line x1="15" y1="15" x2="85" y2="85" stroke="#00ff41" strokeWidth="0.15" opacity="0.08" />
+          <line x1="85" y1="15" x2="15" y2="85" stroke="#00ff41" strokeWidth="0.15" opacity="0.08" />
 
           {/* Sweep gradient definition */}
           <defs>
             <linearGradient 
-              id={`sweepGrad-${sanitizedName}`} 
+              id={`sweepGrad-${entityName.replace(/\s/g, '')}`} 
               gradientUnits="userSpaceOnUse"
               x1="50" y1="50" x2="50" y2="2"
             >
-              <stop offset="0%" stopColor="hsl(195 100% 50%)" stopOpacity="0" />
-              <stop offset="60%" stopColor="hsl(195 100% 50%)" stopOpacity="0.5" />
-              <stop offset="100%" stopColor="hsl(210 100% 50%)" stopOpacity="0.9" />
+              <stop offset="0%" stopColor="#00ff41" stopOpacity="0" />
+              <stop offset="100%" stopColor="#00ff41" stopOpacity="0.8" />
             </linearGradient>
             
             {/* Sweep trail gradient */}
             <linearGradient
-              id={`sweepTrail-${sanitizedName}`}
+              id={`sweepTrail-${entityName.replace(/\s/g, '')}`}
               gradientTransform={`rotate(${sweepAngle - 60}, 50, 50)`}
             >
-              <stop offset="0%" stopColor="hsl(195 100% 50%)" stopOpacity="0" />
-              <stop offset="50%" stopColor="hsl(195 100% 50%)" stopOpacity="0.08" />
-              <stop offset="100%" stopColor="hsl(210 100% 50%)" stopOpacity="0.2" />
+              <stop offset="0%" stopColor="#00ff41" stopOpacity="0" />
+              <stop offset="50%" stopColor="#00ff41" stopOpacity="0.05" />
+              <stop offset="100%" stopColor="#00ff41" stopOpacity="0.15" />
             </linearGradient>
-
-            {/* Glow filter */}
-            <filter id={`glow-${sanitizedName}`} x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-              <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
           </defs>
 
           {/* Sweep trail */}
@@ -221,9 +199,9 @@ const EntityRadar = ({ entityName, entityType, clockOffset, onQuarterTick }: Ent
             cy="50"
             r="47"
             fill="none"
-            stroke={`url(#sweepTrail-${sanitizedName})`}
+            stroke={`url(#sweepTrail-${entityName.replace(/\s/g, '')})`}
             strokeWidth="46"
-            opacity="0.4"
+            opacity="0.3"
             style={{
               clipPath: "polygon(50% 50%, 50% 0%, 100% 0%, 100% 50%)",
               transform: `rotate(${sweepAngle - 90}deg)`,
@@ -240,38 +218,33 @@ const EntityRadar = ({ entityName, entityType, clockOffset, onQuarterTick }: Ent
           >
             <path
               d="M50,50 L50,3 A47,47 0 0,1 75,10 Z"
-              fill={`url(#sweepGrad-${sanitizedName})`}
-              opacity="0.5"
+              fill={`url(#sweepGrad-${entityName.replace(/\s/g, '')})`}
+              opacity="0.4"
             />
             <line
               x1="50"
               y1="50"
               x2="50"
               y2="3"
-              stroke="hsl(195 100% 50%)"
-              strokeWidth="1.5"
-              opacity="0.95"
-              filter={`url(#glow-${sanitizedName})`}
+              stroke="#00ff41"
+              strokeWidth="1"
+              opacity="0.9"
+              style={{
+                filter: "drop-shadow(0 0 3px #00ff41)",
+              }}
             />
           </g>
 
-          {/* Center dot with premium styling */}
-          <circle cx="50" cy="50" r="3" fill="hsl(195 100% 50%)" opacity="0.3" />
-          <circle cx="50" cy="50" r="2" fill="hsl(210 100% 50%)" opacity="0.7" />
-          <circle cx="50" cy="50" r="1" fill="white" opacity="0.9" />
+          {/* Center dot */}
+          <circle cx="50" cy="50" r="2" fill="#00ff41" opacity="0.8" />
+          <circle cx="50" cy="50" r="1" fill="#fff" opacity="0.9" />
         </svg>
 
         {/* Threat dots overlay */}
-        <div className="absolute inset-0 z-20">
+        <div className="absolute inset-0">
           <AnimatePresence>
             {threats.map((threat) => {
               const flicker = Math.sin(Date.now() / 200 + threat.flickerPhase) * 0.15;
-              const threatColor = threat.severity > 0.7 
-                ? "hsl(0 85% 55%)" 
-                : threat.severity > 0.4 
-                  ? "hsl(25 90% 55%)" 
-                  : "hsl(35 85% 60%)";
-              
               return (
                 <motion.div
                   key={threat.id}
@@ -281,18 +254,15 @@ const EntityRadar = ({ entityName, entityType, clockOffset, onQuarterTick }: Ent
                     scale: 1,
                   }}
                   exit={{ opacity: 0, scale: 0 }}
-                  transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
                   className="absolute rounded-full"
                   style={{
                     left: `${threat.x}%`,
                     top: `${threat.y}%`,
-                    width: 5 + threat.severity * 4,
-                    height: 5 + threat.severity * 4,
-                    backgroundColor: threatColor,
-                    boxShadow: `
-                      0 0 ${8 + threat.severity * 6}px ${threatColor},
-                      0 0 ${16 + threat.severity * 8}px ${threatColor}80
-                    `,
+                    width: 4 + threat.severity * 3,
+                    height: 4 + threat.severity * 3,
+                    backgroundColor: threat.severity > 0.7 ? "#ff3333" : threat.severity > 0.4 ? "#ff6644" : "#ff8866",
+                    boxShadow: `0 0 ${6 + threat.severity * 4}px ${threat.severity > 0.7 ? "#ff3333" : "#ff6644"}`,
                     transform: "translate(-50%, -50%)",
                   }}
                 />
@@ -303,52 +273,24 @@ const EntityRadar = ({ entityName, entityType, clockOffset, onQuarterTick }: Ent
 
         {/* Scan noise overlay */}
         <div 
-          className="absolute inset-0 rounded-full pointer-events-none opacity-10 z-30"
+          className="absolute inset-0 rounded-full pointer-events-none opacity-20"
           style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
             mixBlendMode: "overlay",
-          }}
-        />
-
-        {/* Edge highlight ring */}
-        <div 
-          className="absolute inset-0 rounded-full pointer-events-none z-30"
-          style={{
-            border: "1px solid hsla(195, 100%, 50%, 0.15)",
-            boxShadow: "inset 0 0 20px hsla(210, 100%, 50%, 0.05)",
           }}
         />
       </div>
 
       {/* Threat count indicator */}
-      <div className="mt-3 flex items-center gap-2 px-3 py-1.5 rounded-full bg-sentinel-navy/50 border border-sentinel-cyan/10">
-        <motion.div 
+      <div className="mt-2 flex items-center gap-1.5">
+        <div 
           className="w-2 h-2 rounded-full"
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.8, 1, 0.8],
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
           style={{
-            backgroundColor: threats.length > 5 
-              ? "hsl(0 85% 55%)" 
-              : threats.length > 3 
-                ? "hsl(25 90% 55%)" 
-                : "hsl(195 100% 50%)",
-            boxShadow: `0 0 8px ${
-              threats.length > 5 
-                ? "hsl(0 85% 55%)" 
-                : threats.length > 3 
-                  ? "hsl(25 90% 55%)" 
-                  : "hsl(195 100% 50%)"
-            }`,
+            backgroundColor: threats.length > 5 ? "#ff3333" : threats.length > 3 ? "#ff6644" : "#00ff41",
+            boxShadow: `0 0 6px ${threats.length > 5 ? "#ff3333" : threats.length > 3 ? "#ff6644" : "#00ff41"}`,
           }}
         />
-        <span className="text-[10px] text-sentinel-cyan/80 font-mono tracking-wider">
+        <span className="text-[10px] text-[#00ff41]/70 font-mono">
           {threats.length} ACTIVE
         </span>
       </div>
@@ -357,3 +299,4 @@ const EntityRadar = ({ entityName, entityType, clockOffset, onQuarterTick }: Ent
 };
 
 export default EntityRadar;
+
