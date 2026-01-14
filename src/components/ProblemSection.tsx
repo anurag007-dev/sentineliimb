@@ -5,60 +5,60 @@ const problems = [
   {
     icon: Clock,
     title: "Narratives Escalate Faster Than Response Teams",
-    description: "Online narratives escalate faster than legal or PR teams can react, turning minor incidents into full-scale crises within hours.",
+    description: "Online narratives escalate faster than legal or PR teams can react.",
   },
   {
     icon: FileX,
     title: "Evidence Disappears or Becomes Inadmissible",
-    description: "Critical digital evidence is deleted, modified, or captured without proper chain-of-custody, rendering it useless in legal proceedings.",
+    description: "Critical digital evidence is deleted or captured without chain-of-custody.",
   },
   {
     icon: AlertTriangle,
     title: "Decisions Made Without Accountability",
-    description: "Response decisions are made ad hoc without audit trails, creating liability exposure and compliance gaps.",
+    description: "Response decisions made ad hoc without audit trails create liability.",
   },
   {
     icon: Scale,
     title: "Multi-Domain Fallout From Single Incidents",
-    description: "One reputational incident can trigger legal action, regulatory scrutiny, financial penalties, and stakeholder loss simultaneously.",
+    description: "One incident triggers legal, regulatory, and stakeholder consequences.",
   },
 ];
 
 const ProblemSection = () => {
   return (
-    <section className="py-24 bg-sentinel-navy/20 relative">
-      <div className="container mx-auto px-6">
+    <section className="py-28 relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-sentinel-slate/5 to-transparent" />
+      
+      <div className="container mx-auto px-6 relative">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
           className="text-center mb-16"
         >
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-foreground mb-4">
-            The Problem
-          </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Traditional reputation management wasn't designed for the speed and stakes of today's information environment.
+          <h2 className="text-foreground mb-4">The Problem</h2>
+          <p className="text-muted-foreground max-w-xl mx-auto">
+            Traditional reputation management wasn't built for today's speed.
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-5 max-w-5xl mx-auto">
           {problems.map((problem, index) => (
             <motion.div
               key={index}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="sentinel-card p-6 group hover:border-sentinel-steel/50 transition-colors"
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 0.5, delay: index * 0.1, ease: [0.4, 0, 0.2, 1] }}
+              className="sentinel-card p-6 group"
             >
               <div className="flex items-start gap-4">
-                <div className="p-3 rounded-lg bg-sentinel-slate/50 text-sentinel-steel group-hover:text-sentinel-glow transition-colors">
-                  <problem.icon className="w-6 h-6" strokeWidth={1.5} />
+                <div className="p-3 rounded-xl bg-gradient-to-br from-sentinel-slate to-sentinel-navy border border-white/[0.06] text-sentinel-steel group-hover:text-sentinel-glow transition-colors duration-300">
+                  <problem.icon className="w-5 h-5" strokeWidth={1.5} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-medium text-foreground mb-2">
+                  <h3 className="text-base font-medium text-foreground mb-1.5">
                     {problem.title}
                   </h3>
                   <p className="text-muted-foreground text-sm leading-relaxed">
